@@ -1,0 +1,21 @@
+[Desktop Entry]
+Name=Lorapok Instar
+Comment=Systems-grade, low-RAM sandboxed multi-account workspace
+GenericName=Internet Messenger Workspace
+Exec=lorapok-instar %U
+Icon=tech.lorapok.instar
+Terminal=false
+Type=Application
+StartupWMClass=lorapok-instar
+Categories=Network;Chat;InstantMessaging;Office;
+MimeType=x-scheme-handler/instar;
+Keywords=chat;messaging;whatsapp;telegram;discord;slack;workspace;multi-account;
+Actions=NewWindow;HibernateAll;
+
+[Desktop Action NewWindow]
+Name=Open New Workspace
+Exec=lorapok-instar --new-window
+
+[Desktop Action HibernateAll]
+Name=Hibernate Background Apps
+Exec=lorapok-instar --hibernate-all
