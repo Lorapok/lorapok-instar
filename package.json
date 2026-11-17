@@ -19,7 +19,9 @@
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "dist:deb": "electron-builder --linux deb",
-    "dist:appimage": "electron-builder --linux AppImage"
+    "dist:appimage": "electron-builder --linux AppImage",
+    "build:deb": "electron-builder --linux deb",
+    "build:appimage": "electron-builder --linux AppImage"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",

@@ -1,5 +1,5 @@
 import { app, BrowserWindow } from 'electron'
-import { WAYLAND_OZONE_FLAGS, LINUX_CHROME_UA } from '../shared/constants'
+import { LINUX_CHROME_UA } from '../shared/constants'
 import { initDatabase } from './database/sqlite'
 import { cacheManager } from './engine/cacheManager'
 import { cocoonManager } from './engine/cocoonManager'
@@ -13,23 +13,25 @@ import { registerIpcHandlers } from './ipc/router'
 // High-precision startup timer
 const bootStart = process.hrtime.bigint()
 
-// Apply Linux Wayland / Vulkan / VA-API GPU flags
+// Apply Linux GPU, Wayland & Ubuntu 24.04+ hardware acceleration flags before app.whenReady()
 function applyLinuxHardwareAccelerationFlags() {
   if (process.platform === 'linux') {
-    const isWayland = process.env.XDG_SESSION_TYPE === 'wayland'
+    const isWayland = process.env.XDG_SESSION_TYPE === 'wayland' || Boolean(process.env.WAYLAND_DISPLAY)
+
     if (isWayland) {
       app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
+      app.commandLine.appendSwitch('enable-wayland-ime')
       app.commandLine.appendSwitch(
         'enable-features',
-        'UseOzonePlatform,WaylandWindowDecorations,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecoder,Vulkan'
+        'UseOzonePlatform,WaylandWindowDecorations,VaapiVideoDecodeLinuxGL,WebRTCPipeWireCapturer'
       )
+    } else {
+      app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecodeLinuxGL,VaapiIgnoreDriverChecks')
     }
 
     app.commandLine.appendSwitch('enable-gpu-rasterization')
     app.commandLine.appendSwitch('enable-zero-copy')
-    app.commandLine.appendSwitch('canvas-oop-rasterization')
-    app.commandLine.appendSwitch('ignore-gpu-blocklist')
-    app.commandLine.appendSwitch('enable-accelerated-2d-canvas')
+    app.commandLine.appendSwitch('disable-software-rasterizer')
 
     // AppArmor/Sandboxing compatibility on modern Ubuntu (24.04/26.04)
     if (process.env.INSTAR_DISABLE_SANDBOX === '1') {
