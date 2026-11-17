@@ -1,6 +1,14 @@
-import { app, BrowserWindow, shell } from 'electron'
-import { join } from 'node:path'
+import { app, BrowserWindow } from 'electron'
 import { WAYLAND_OZONE_FLAGS, LINUX_CHROME_UA } from '../shared/constants'
+import { initDatabase } from './database/sqlite'
+import { cacheManager } from './engine/cacheManager'
+import { cocoonManager } from './engine/cocoonManager'
+import { securityManager } from './security/securityManager'
+import { viewManager } from './engine/viewManager'
+import { windowManager } from './desktop/windowManager'
+import { trayManager } from './desktop/trayManager'
+import { notificationHub } from './desktop/notificationHub'
+import { registerIpcHandlers } from './ipc/router'
 
 // High-precision startup timer
 const bootStart = process.hrtime.bigint()
@@ -8,11 +16,13 @@ const bootStart = process.hrtime.bigint()
 // Apply Linux Wayland / Vulkan / VA-API GPU flags
 function applyLinuxHardwareAccelerationFlags() {
   if (process.platform === 'linux') {
-    // Detect Wayland session
     const isWayland = process.env.XDG_SESSION_TYPE === 'wayland'
     if (isWayland) {
       app.commandLine.appendSwitch('ozone-platform-hint', 'auto')
-      app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform,WaylandWindowDecorations,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecoder,Vulkan')
+      app.commandLine.appendSwitch(
+        'enable-features',
+        'UseOzonePlatform,WaylandWindowDecorations,AcceleratedVideoDecodeLinuxGL,VaapiVideoDecoder,Vulkan'
+      )
     }
 
     app.commandLine.appendSwitch('enable-gpu-rasterization')
@@ -22,7 +32,6 @@ function applyLinuxHardwareAccelerationFlags() {
     app.commandLine.appendSwitch('enable-accelerated-2d-canvas')
 
     // AppArmor/Sandboxing compatibility on modern Ubuntu (24.04/26.04)
-    // When run unconfined or in standard container, ensure renderer doesn't abort
     if (process.env.INSTAR_DISABLE_SANDBOX === '1') {
       app.commandLine.appendSwitch('no-sandbox')
     }
@@ -41,62 +50,65 @@ if (!gotTheLock) {
   process.exit(0)
 }
 
-let mainWindow: BrowserWindow | null = null
+app.whenReady().then(() => {
+  // 1. Initialize SQLite Database with WAL mode & schemas
+  initDatabase()
 
-function createMainWindow(): BrowserWindow {
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 800,
-    minHeight: 600,
-    show: false,
-    autoHideMenuBar: true,
-    frame: false,
-    titleBarStyle: 'hidden',
-    backgroundColor: '#090a0f',
-    webPreferences: {
-      preload: join(__dirname, '../preload/mainPreload.js'),
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-      webSecurity: true
+  // 2. Initialize Cache Manager (LRU evictions & telemetry)
+  cacheManager.init()
+
+  // 3. Initialize Cocoon Manager (partition isolation & proxy auth)
+  cocoonManager.init()
+
+  // 4. Create Main Window with persisted geometry
+  const mainWindow = windowManager.createMainWindow()
+
+  // 5. Initialize Security Manager (PIN lock & sender verification)
+  securityManager.init(mainWindow.webContents.id, (lockedCocoon) => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('instar:event:cocoon-updated', lockedCocoon)
     }
   })
 
-  win.on('ready-to-show', () => {
-    win.show()
+  // 6. Initialize Notification Hub
+  notificationHub.init(mainWindow)
+
+  // 7. Initialize Tray Manager
+  trayManager.init(mainWindow)
+
+  // 8. Initialize View Manager
+  viewManager.init(mainWindow, {
+    onUnreadChanged: ({ appId, unreadCount, globalCount }) => {
+      notificationHub.updateGlobalUnreadCount(globalCount)
+      if (!mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('instar:event:unread-changed', { appId, unreadCount, globalCount })
+      }
+    },
+    onNotification: (payload) => {
+      notificationHub.dispatchNotification(payload)
+    }
+  })
+
+  // 9. Register strictly typed IPC Handlers
+  registerIpcHandlers(mainWindow)
+
+  mainWindow.on('ready-to-show', () => {
+    mainWindow.show()
     const bootDurationMs = Number(process.hrtime.bigint() - bootStart) / 1_000_000
-    console.log(`[Lorapok Instar] Cold startup completed in ${bootDurationMs.toFixed(2)}ms`)
+    console.log(`[Lorapok Instar] Cold startup completed in ${bootDurationMs.toFixed(2)}ms (Target < 900ms)`)
   })
-
-  win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
-
-  // Load renderer
-  if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
-  }
-
-  return win
-}
-
-app.whenReady().then(() => {
-  mainWindow = createMainWindow()
 
   app.on('second-instance', () => {
-    if (mainWindow) {
+    if (!mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
       mainWindow.focus()
     }
   })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createMainWindow()
+      windowManager.createMainWindow()
     }
   })
 })
@@ -105,4 +117,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  cacheManager.destroy()
+  securityManager.destroy()
+  viewManager.destroy()
+  trayManager.destroy()
 })
