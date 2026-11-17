@@ -1,0 +1,52 @@
+name: lorapok-instar
+base: core24
+version: '1.0.0'
+summary: High-throughput, low-RAM sandboxed multi-account workspace
+description: |
+  Lorapok Instar is a systems-grade multi-account workspace engineered for
+  Linux and Ubuntu desktops with hardware-accelerated Wayland compositing,
+  WebContentsView process pooling, audio-aware hibernation, and OS-keyring
+  encryption at rest.
+
+grade: stable
+confinement: strict
+
+apps:
+  lorapok-instar:
+    command: lorapok-instar/lorapok-instar --no-sandbox
+    desktop: usr/share/applications/tech.lorapok.instar.desktop
+    extensions: [gnome]
+    plugs:
+      - browser-support
+      - network
+      - network-bind
+      - audio-playback
+      - audio-record
+      - camera
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - unity7
+      - password-manager-service
+      - screen-inhibit-control
+    environment:
+      DISABLE_WAYLAND: 0
+      ELECTRON_OZONE_PLATFORM_HINT: auto
+
+parts:
+  lorapok-instar:
+    plugin: nil
+    override-build: |
+      npm ci
+      npm run build
+      npx electron-builder --linux dir
+      mkdir -p $SNAPCRAFT_PART_INSTALL/lorapok-instar
+      cp -r release/linux-unpacked/* $SNAPCRAFT_PART_INSTALL/lorapok-instar/
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/applications
+      cp assets/tech.lorapok.instar.desktop $SNAPCRAFT_PART_INSTALL/usr/share/applications/
+      mkdir -p $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps
+      cp assets/icons/icon.png $SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/512x512/apps/tech.lorapok.instar.png
+    build-packages:
+      - libsecret-1-dev
+      - libarchive-tools

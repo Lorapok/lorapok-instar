@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>tech.lorapok.instar</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>Apache-2.0</project_license>
+  <name>Lorapok Instar</name>
+  <summary>High-throughput, low-RAM sandboxed multi-account workspace</summary>
+  <description>
+    <p>
+      Lorapok Instar is a systems-grade multi-account workspace engineered for Linux and Ubuntu desktops.
+      Unlike sluggish web wrapper applications, Instar enforces hardware-accelerated Wayland compositing,
+      V8 bytecode caching, SQLite WAL-mode state persistence, and automatic deep freeze hibernation that reclaims
+      RAM from inactive workspaces while protecting active voice/video calls.
+    </p>
+    <p>Key Capabilities:</p>
+    <ul>
+      <li>Hardened Cryptographic Isolation (Cocoon partitions with zero cross-session cookie/cache leakage)</li>
+      <li>Split-View Multitasking: Render 2 or 3 messenger apps simultaneously side-by-side with draggable sashes</li>
+      <li>Audio-Aware Hibernation: Hibernates background accounts to 0 MB RAM without interrupting calls</li>
+      <li>Encryption at Rest: Proxy credentials, PIN hashes, and vault archives protected with OS Keyring (libsecret) and AES-256-GCM</li>
+      <li>Pre-tuned profiles for WhatsApp, Telegram, Discord, Slack, Messenger, Instagram, X (Twitter), LinkedIn, and custom apps</li>
+      <li>Native Ubuntu AppIndicator system tray, desktop notifications, and dock unread badge counts</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">tech.lorapok.instar.desktop</launchable>
+
+  <url type="homepage">https://lorapok.tech</url>
+  <url type="bugtracker">https://github.com/Lorapok/lorapok-instar/issues</url>
+  <url type="vcs-browser">https://github.com/Lorapok/lorapok-instar</url>
+  <url type="donation">https://lorapok.tech/sponsor</url>
+
+  <developer id="tech.lorapok">
+    <name>Lorapok Labs</name>
+  </developer>
+
+  <provides>
+    <binary>lorapok-instar</binary>
+    <binary>instar</binary>
+  </provides>
+
+  <categories>
+    <category>Network</category>
+    <category>Chat</category>
+    <category>InstantMessaging</category>
+    <category>Office</category>
+  </categories>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.0.0" date="2026-11-17">
+      <description>
+        <p>Initial production release of Lorapok Instar with Wayland Ozone acceleration, WebContentsView pooling, and AES-256-GCM vault security.</p>
+      </description>
+    </release>
+  </releases>
+</component>
