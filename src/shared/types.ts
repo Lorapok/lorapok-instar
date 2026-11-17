@@ -132,7 +132,7 @@ export interface InstarIpcApi {
   // Cocoon operations
   getCocoons: () => Promise<Cocoon[]>
   createCocoon: (cocoon: Omit<Cocoon, 'id' | 'createdAt' | 'updatedAt' | 'hasPin' | 'isLocked'>, pin?: string) => Promise<Cocoon>
-  updateCocoon: (id: string, updates: Partial<Cocoon>, newPin?: string) => Promise<Cocoon>
+  updateCocoon: (id: string, updates: Partial<Cocoon>, newPin?: string | null) => Promise<Cocoon>
   deleteCocoon: (id: string) => Promise<boolean>
   unlockCocoon: (id: string, pin: string) => Promise<boolean>
   lockCocoon: (id: string) => Promise<boolean>
