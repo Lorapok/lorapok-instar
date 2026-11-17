@@ -14,6 +14,7 @@ release/
 *.snap
 
 # Vite & Electron cache
+*.tsbuildinfo
 .electron-vite/
 .vite/
 .cache/
